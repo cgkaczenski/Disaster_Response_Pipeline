@@ -1,16 +1,50 @@
 import sys
+import pandas as pd
+from sqlalchemy import create_engine
 
 
 def load_data(messages_filepath, categories_filepath):
-    pass
+    messages = pd.read_csv(messages_filepath)
+    categories = pd.read_csv(categories_filepath)
+    df = messages.merge(categories, on=['id'])
 
+    return df
+
+# Used in clean_data lambda function to replace 2's with 1's
+# Scoring function returns ValueError: multiclass-multioutput otherwise
+def replace2With1(x):
+    if x == 2:
+        return 1
+    return x
 
 def clean_data(df):
-    pass
+	categories = df['categories'].str.split(';',expand=True)
+	row = categories.loc[0]
+
+	#remove last 2 character: '-1' or '-0'
+	category_colname = row.apply(lambda x : x[:-2])
+
+	# rename the columns 
+	categories.columns = category_colname
+
+	for column in categories:
+		# set each value to be the last character of the string
+		categories[column] = categories[column].str[-1:] 
+		categories[column] = categories[column].apply(lambda x: int(x))
+
+	df = df.drop('categories',axis=1)
+	df = pd.concat([df,categories],axis=1)
+	df.drop_duplicates(inplace=True)
+
+	df['related'] = df['related'].apply(replace2With1)
+
+	return df
 
 
 def save_data(df, database_filename):
-    pass  
+	engine_str = 'sqlite:///' + database_filename
+	engine = create_engine(engine_str)
+	df.to_sql('Table', engine, index=False, if_exists='replace') 
 
 
 def main():
