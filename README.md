@@ -2,8 +2,11 @@
 
 ### Project Description
 Web app for an emergency worker can input a new message and get classification results in several categories.
+
 Machine Learning model trained on thousands of real messages provided by www.figure-eight.com
+
 ETL (Extract Transform Load) data pipeline to clean dataset 
+
 Machine Learning model demonstrates the use of scikit-learn pipelines and grid search
 
 ### Instructions:
