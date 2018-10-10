@@ -4,20 +4,50 @@ from sqlalchemy import create_engine
 
 
 def load_data(messages_filepath, categories_filepath):
+    """
+    Load data from command line args
+
+    Args:
+    message_filepath: str. filepath to message.csv
+    catgegories_filepath: str. filepath to categories.csv
+
+    Return:
+    df: pandas dataframe of merged csv files
+    """
     messages = pd.read_csv(messages_filepath)
     categories = pd.read_csv(categories_filepath)
     df = messages.merge(categories, on=['id'])
 
     return df
 
-# Used in clean_data lambda function to replace 2's with 1's
-# Scoring function returns ValueError: multiclass-multioutput otherwise
-def replace2With1(x):
-    if x == 2:
+
+def replace_2(i):
+    """
+    Replace int 2's with 1's. Scoring function requires binary input
+    Needed for lambda function
+
+    Args:
+    i - int. Can be 0, 1, or 2
+
+    Returns:
+    replaces the 2's with 1
+    """
+    if i == 2:
         return 1
-    return x
+    return i
+    
 
 def clean_data(df):
+	"""
+	Splits the categories column into separate columns,
+	converts values to binary, and drops duplicates
+
+	Args:
+	df: pandas dataframe
+
+	Returns:
+	df: cleaned dataframe
+	"""
 	categories = df['categories'].str.split(';',expand=True)
 	row = categories.loc[0]
 
@@ -36,12 +66,19 @@ def clean_data(df):
 	df = pd.concat([df,categories],axis=1)
 	df.drop_duplicates(inplace=True)
 
-	df['related'] = df['related'].apply(replace2With1)
+	df['related'] = df['related'].apply(replace_2)
 
 	return df
 
 
 def save_data(df, database_filename):
+	"""
+	Save the clean dataset into an sqlite database
+
+	Args:
+	df: cleaned dataframe
+	database_filename: name of the file to be used in train_classifier.py
+	"""
 	engine_str = 'sqlite:///' + database_filename
 	engine = create_engine(engine_str)
 	df.to_sql('Table', engine, index=False, if_exists='replace') 
