@@ -18,6 +18,17 @@ nltk.download('punkt')
 nltk.download('wordnet')
 
 def load_data(database_filepath):
+    """
+    Load data from database
+
+    Args:
+    database_filepath: filepath to read dataset provided on command line
+
+    Returns:
+    X: dataframe with text to be used as predictor variable
+    Y: dataframe with target variables, 36 categories
+    category_names: names of 36 categories for model output
+    """
     engine_str = 'sqlite:///' + database_filepath
     engine = create_engine(engine_str)
     df = pd.read_sql_table('Table',engine)
@@ -30,7 +41,19 @@ def load_data(database_filepath):
 
 
 def tokenize(text):
+    """
+    Normalize, lemmatize, and tokenize text
+
+    Args:
+    text: raw text data
+
+    Returns:
+    clean_tokens: prepared model input
+    """
+
+    # lower case and remove punctuation
     text = re.sub(r'[^\w\s]',' ',text.lower())
+
     tokens = word_tokenize(text)
     lemmatizer = WordNetLemmatizer()
 
@@ -41,25 +64,52 @@ def tokenize(text):
 
     return clean_tokens
 
+
 def build_model():
+    """
+    Machine learning model with multiclass output.
+    Vectorize and then apply TF-IDF to the text, and use grid search for best params
+
+    Returns:
+    cv: initalized model not yet trained
+    """
     pipeline = Pipeline([
         ('vect', CountVectorizer(tokenizer=tokenize)),
         ('tfidf', TfidfTransformer()),
         ('clf',MultiOutputClassifier(RandomForestClassifier()))
     ])
 
-    return pipeline
+    params = {
+        'clf__estimator__n_estimators': [5,10,25]
+    }
+    cv = GridSearchCV(pipeline, param_grid=params)
+    return cv
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    Y_pred = model.predict(X_test)
+    """
+    Report the f1 score, precision and recall on test set
 
+    Args:
+    model: trained model used to predict on test set
+    X_test: text used as model input
+    Y_test: True labels for test set
+    category_names: names of 36 classes of output
+    """
+    Y_pred = model.predict(X_test)
     print(classification_report(Y_test, Y_pred, target_names=category_names))
 
 
 def save_model(model, model_filepath):
-    pickle.dump(model, open(model_filepath, 'wb'))
+    """
+    Export model to be used in web app
 
+    Args:
+    model: trained model 
+    model_filepath: command line arg, saved model name
+    """
+    pickle.dump(model, open(model_filepath, 'wb'))
+    
 
 def main():
     if len(sys.argv) == 3:
